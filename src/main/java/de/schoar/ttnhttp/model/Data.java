@@ -1,8 +1,12 @@
 package de.schoar.ttnhttp.model;
 
-import java.time.Clock;
+import java.io.IOException;
 import java.time.Instant;
 import java.util.Date;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map.Entry;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -13,147 +17,156 @@ import javax.persistence.OneToOne;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Entity
 public class Data {
+
+	private static final Logger LOG = LoggerFactory.getLogger(Data.class);
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Column(name = "id", updatable = false, nullable = false)
 	@JsonIgnore
-	private Long dataId;
+	private Long id;
 
 	@OneToOne
 	private Uplink uplink;
 
-	@OneToOne	
-	private UplinkDetails uplinkDetails;
-
 	@Temporal(TemporalType.TIMESTAMP)
-	private Date createdAt;
+	private Date created_at;
 
-	private String ttn_app_id;
-	private String ttn_dev_id;
-	private String ttn_hardware_serial;
+	private String meta_time_ttn;
+	private Instant meta_time_converted;
 
-	private Boolean ttn_is_retry;
+	private String msg_app_id_ttn;
+	private String msg_dev_id_ttn;
+	private String msg_hardware_serial_ttn;
 
-	private Instant time_converted;
+	private Integer msg_port_ttn;
+	private Integer msg_counter_ttn;
+	private Boolean msg_is_retry_ttn;
 
-	private Integer ttn_port;
+	private String data_name;
+	private Integer data_int;
+	private Double data_double;
+	private String data_text;
 
-	private String name;
-	private Integer value_int;
-	private Double value_double;
-	private String value_text;
+	private Data(Uplink uplink) {
+		this.created_at = uplink.getCreated_at();
+		this.uplink = uplink;
 
-	public Data() {
-		this.createdAt = Date.from(Instant.now(Clock.systemUTC()));
+		this.msg_app_id_ttn = uplink.getMsg_app_id_ttn();
+		this.msg_dev_id_ttn = uplink.getMsg_dev_id_ttn();
+		this.msg_hardware_serial_ttn = uplink.getMsg_hardware_serial_ttn();
+		this.msg_port_ttn = uplink.getMsg_port_ttn();
+		this.msg_counter_ttn = uplink.getMsg_counter_ttn();
+		this.msg_is_retry_ttn = uplink.getMsg_is_retry_ttn();
+
+		this.meta_time_ttn = uplink.getMeta_time_ttn();
+		this.meta_time_converted = uplink.getMeta_time_converted();
+	}
+
+	public static List<Data> parse(Uplink uplink) {
+		List<Data> datas = new LinkedList<Data>();
+
+		try {
+			ObjectMapper mapper = new ObjectMapper();
+			JsonNode jn = mapper.readTree(uplink.getMsg_payload_fields_ttn());
+
+			Iterator<Entry<String, JsonNode>> it = jn.fields();
+			while (it.hasNext()) {
+				Entry<String, JsonNode> entry = it.next();
+				String key = (String) entry.getKey();
+				JsonNode value = entry.getValue();
+
+				Data data = new Data(uplink);
+				data.data_name = key;
+				if (value.isInt()) {
+					data.data_int = value.asInt();
+					data.data_double = Integer.valueOf(value.asInt()).doubleValue();
+					data.data_text = String.valueOf(value.asInt());
+				}
+				if (value.isDouble()) {
+					data.data_int = Double.valueOf(value.asDouble()).intValue();
+					data.data_double = value.asDouble();
+					data.data_text = String.valueOf(value.asDouble());
+				}
+				if (value.isTextual()) {
+					data.data_text = value.asText();
+				}
+				datas.add(data);
+			}
+		} catch (IOException ex) {
+			LOG.error("Failed to parse data: " + uplink.getMsg_payload_fields_ttn(), ex);
+		}
+
+		return datas;
+	}
+
+	public Long getId() {
+		return id;
 	}
 
 	public Uplink getUplink() {
 		return uplink;
 	}
 
-	public void setUplink(Uplink uplink) {
-		this.uplink = uplink;
+	public Date getCreated_at() {
+		return created_at;
 	}
 
-	public UplinkDetails getUplinkDetails() {
-		return uplinkDetails;
+	public String getMeta_time_ttn() {
+		return meta_time_ttn;
 	}
 
-	public void setUplinkDetails(UplinkDetails uplinkDetails) {
-		this.uplinkDetails = uplinkDetails;
+	public Instant getMeta_time_converted() {
+		return meta_time_converted;
 	}
 
-	public String getTtn_app_id() {
-		return ttn_app_id;
+	public String getMsg_app_id_ttn() {
+		return msg_app_id_ttn;
 	}
 
-	public void setTtn_app_id(String ttn_app_id) {
-		this.ttn_app_id = ttn_app_id;
+	public String getMsg_dev_id_ttn() {
+		return msg_dev_id_ttn;
 	}
 
-	public String getTtn_dev_id() {
-		return ttn_dev_id;
+	public String getMsg_hardware_serial_ttn() {
+		return msg_hardware_serial_ttn;
 	}
 
-	public void setTtn_dev_id(String ttn_dev_id) {
-		this.ttn_dev_id = ttn_dev_id;
+	public Integer getMsg_port_ttn() {
+		return msg_port_ttn;
 	}
 
-	public String getTtn_hardware_serial() {
-		return ttn_hardware_serial;
+	public Integer getMsg_counter_ttn() {
+		return msg_counter_ttn;
 	}
 
-	public void setTtn_hardware_serial(String ttn_hardware_serial) {
-		this.ttn_hardware_serial = ttn_hardware_serial;
+	public Boolean getMsg_is_retry_ttn() {
+		return msg_is_retry_ttn;
 	}
 
-	public Boolean getTtn_is_retry() {
-		return ttn_is_retry;
+	public String getData_name() {
+		return data_name;
 	}
 
-	public void setTtn_is_retry(Boolean ttn_is_retry) {
-		this.ttn_is_retry = ttn_is_retry;
+	public Integer getData_int() {
+		return data_int;
 	}
 
-	public Instant getTime_converted() {
-		return time_converted;
+	public Double getData_double() {
+		return data_double;
 	}
 
-	public void setTime_converted(Instant time_converted) {
-		this.time_converted = time_converted;
-	}
-
-	public Integer getTtn_port() {
-		return ttn_port;
-	}
-
-	public void setTtn_port(Integer ttn_port) {
-		this.ttn_port = ttn_port;
-	}
-
-	public String getName() {
-		return name;
-	}
-
-	public void setName(String name) {
-		this.name = name;
-	}
-
-	public Integer getValue_int() {
-		return value_int;
-	}
-
-	public void setValue_int(Integer value_int) {
-		this.value_int = value_int;
-	}
-
-	public Double getValue_double() {
-		return value_double;
-	}
-
-	public void setValue_double(Double value_double) {
-		this.value_double = value_double;
-	}
-
-	public String getValue_text() {
-		return value_text;
-	}
-
-	public void setValue_text(String value_text) {
-		this.value_text = value_text;
-	}
-
-	public Long getDataId() {
-		return dataId;
-	}
-
-	public Date getCreatedAt() {
-		return createdAt;
+	public String getData_text() {
+		return data_text;
 	}
 
 }

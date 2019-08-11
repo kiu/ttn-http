@@ -11,13 +11,13 @@
 	</parent>
 	<groupId>de.schoar.ttnhttp</groupId>
 	<artifactId>TTN-http</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.0.2-SNAPSHOT</version>
 	<name>TTN-http</name>
 	<description>TTN HTTP Endpoint</description>
 	<packaging>jar</packaging>
 
 	<properties>
-		<java.version>11</java.version>
+		<java.version>8</java.version>
 	</properties>
 
 	<dependencies>
