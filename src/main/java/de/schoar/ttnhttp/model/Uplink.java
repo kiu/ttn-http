@@ -37,12 +37,15 @@ public class Uplink {
 	@Temporal(TemporalType.TIMESTAMP)
 	private Date created_at;
 
+	private String ttn_stack;
+	
 	@Lob
 	private String json_ttn;
-
+	
 	private String msg_app_id_ttn;
 	private String msg_dev_id_ttn;
 	private String msg_hardware_serial_ttn;
+	private String msg_dev_addr_ttn;
 
 	private Integer msg_port_ttn;
 	private Integer msg_counter_ttn;
@@ -57,10 +60,15 @@ public class Uplink {
 	private Instant meta_time_converted;
 
 	private Double meta_frequency_ttn;
+	private String meta_frequencyt_ttn;
 	private String meta_modulation_ttn;
 	private String meta_data_rate_ttn;
 	private String meta_coding_rate_ttn;
+	private Integer meta_bandwidth_ttn;
+	private Integer meta_spreading_ttn;
 	private String meta_downlink_url_ttn;
+	private String meta_consumed_airtime_ttn;
+	private Integer meta_data_rate_index_ttn;
 
 	private Integer gw_count;
 	private Integer gw_rssi_best;
@@ -68,13 +76,15 @@ public class Uplink {
 	private Double gw_snr_best;
 	private Double gw_snr_worst;
 
+	
 	private Uplink(Date created_at) {
 	}
 
-	public static Uplink parse(Date created_at, String json) {
+	public static Uplink parseV2(Date created_at, String json) {
 		Uplink uplink = new Uplink(null);
 
 		uplink.created_at = created_at;
+		uplink.ttn_stack = "V2";
 		uplink.json_ttn = json;
 
 		try {
@@ -105,6 +115,50 @@ public class Uplink {
 			uplink.meta_data_rate_ttn = JsonHelper.toText(jn, "data_rate");
 			uplink.meta_coding_rate_ttn = JsonHelper.toText(jn, "coding_rate");
 			uplink.meta_downlink_url_ttn = JsonHelper.toText(jn, "downlink_url");
+		} catch (IOException ex) {
+			LOG.error("Failed to parse uplink: " + json, ex);
+		}
+
+		return uplink;
+	}
+
+	public static Uplink parseV3(Date created_at, String json) {
+		Uplink uplink = new Uplink(null);
+
+		uplink.created_at = created_at;
+		uplink.ttn_stack = "V3";
+		uplink.json_ttn = json;
+
+		try {
+			ObjectMapper mapper = new ObjectMapper();
+			JsonNode jn = mapper.readTree(json);
+
+			uplink.msg_app_id_ttn = JsonHelper.toText(jn, "application_id");
+			uplink.msg_dev_id_ttn = JsonHelper.toText(jn, "device_id");
+			uplink.msg_hardware_serial_ttn = JsonHelper.toText(jn, "dev_eui");
+			uplink.msg_dev_addr_ttn = JsonHelper.toText(jn, "dev_addr");			
+			uplink.msg_port_ttn = JsonHelper.toInteger(jn, "f_port");
+			uplink.msg_counter_ttn = JsonHelper.toInteger(jn, "f_cnt");
+			uplink.msg_payload_raw_ttn = JsonHelper.toText(jn, "frm_payload");
+			if (uplink.msg_payload_raw_ttn != null && uplink.msg_payload_raw_ttn.length() != 0) {
+				uplink.msg_payload_byte = Base64.getDecoder().decode(uplink.msg_payload_raw_ttn);
+			}
+			if (uplink.msg_payload_byte != null && uplink.msg_payload_byte.length != 0) {
+				uplink.msg_payload_hex = HexUtils.toHexString(uplink.msg_payload_byte);
+			}
+			uplink.msg_payload_fields_ttn = JsonHelper.toString(jn, "decoded_payload");
+
+			uplink.meta_time_ttn = JsonHelper.toText(jn, "received_at");
+			if (uplink.meta_time_ttn != null && !uplink.meta_time_ttn.isEmpty()) {
+				uplink.meta_time_converted = Instant.parse(uplink.meta_time_ttn);
+			}
+			uplink.meta_frequencyt_ttn = JsonHelper.toText(jn, "frequency");
+			uplink.meta_bandwidth_ttn = JsonHelper.toInteger(jn, "bandwidth");
+			uplink.meta_spreading_ttn = JsonHelper.toInteger(jn, "spreading_factor");
+			uplink.meta_coding_rate_ttn = JsonHelper.toText(jn, "coding_rate");
+			uplink.meta_consumed_airtime_ttn = JsonHelper.toText(jn, "consumed_airtime");
+			uplink.meta_data_rate_index_ttn = JsonHelper.toInteger(jn, "data_rate_index");
+			
 		} catch (IOException ex) {
 			LOG.error("Failed to parse uplink: " + json, ex);
 		}
@@ -257,5 +311,32 @@ public class Uplink {
 	public Double getGw_snr_worst() {
 		return gw_snr_worst;
 	}
+	
+	public String getTtn_stack() {
+		return ttn_stack;
+	}
 
+	public String getMsg_dev_addr_ttn() {
+		return msg_dev_addr_ttn;
+	}
+
+	public Integer getMeta_bandwidth_ttn() {
+		return meta_bandwidth_ttn;
+	}
+
+	public Integer getMeta_spreading_ttn() {
+		return meta_spreading_ttn;
+	}
+	
+	public String getMeta_frequencyt_ttn() {
+		return meta_frequencyt_ttn;
+	}
+
+	public String getMeta_consumed_airtime_ttn() {
+		return meta_consumed_airtime_ttn;
+	}
+
+	public Integer getMeta_data_rate_index_ttn() {
+		return meta_data_rate_index_ttn;
+	}
 }

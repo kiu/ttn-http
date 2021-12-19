@@ -21,9 +21,9 @@ import de.schoar.ttnhttp.model.Uplink;
 import de.schoar.ttnhttp.model.UplinkRepository;
 
 @RestController
-public class APIController {
+public class APIControllerV2 {
 
-	private static final Logger LOG = LoggerFactory.getLogger(APIController.class);
+	private static final Logger LOG = LoggerFactory.getLogger(APIControllerV2.class);
 
 	@Autowired
 	private UplinkRepository uplink2Repo;
@@ -43,25 +43,25 @@ public class APIController {
 
 		Date created = Date.from(Instant.now(Clock.systemUTC()));
 
-		Uplink uplink = Uplink.parse(created, json);
+		Uplink uplink = Uplink.parseV2(created, json);
 		uplink2Repo.save(uplink);
-		LOG.debug("Saved new uplink: " + uplink.getId());
+		LOG.debug("Saved new V2 uplink: " + uplink.getId());
 
 		List<Data> datas = Data.parse(uplink);
 		for (Data data : datas) {
 			data2Repo.save(data);
-			LOG.debug("Saved new data: " + data.getId());
+			LOG.debug("Saved new V2 data: " + data.getId());
 		}
 
-		List<Gateway> gateways = Gateway.parse(uplink);
+		List<Gateway> gateways = Gateway.parseV2(uplink);
 		for (Gateway gateway : gateways) {
 			gateway2Repo.save(gateway);
-			LOG.debug("Saved new gateway: " + gateway.getId());
+			LOG.debug("Saved new V2 gateway: " + gateway.getId());
 		}
 
 		uplink.parse(gateways);
 		uplink2Repo.save(uplink);
-		LOG.debug("Updated uplink: " + uplink.getId());
+		LOG.debug("Updated V2 uplink: " + uplink.getId());
 
 	}
 

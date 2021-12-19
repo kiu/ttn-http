@@ -40,7 +40,10 @@ public class Gateway {
 	@Temporal(TemporalType.TIMESTAMP)
 	private Date created_at;
 
+	private String ttn_stack;
+
 	private String gtw_id_ttn;
+	private String gtw_name_ttn;
 
 	private Long timestamp_ttn;
 	private String time_ttn;
@@ -48,6 +51,7 @@ public class Gateway {
 
 	private Integer channel_ttn;
 	private Integer rssi_ttn;
+	private Integer rssi_channel_ttn;
 	private Double snr_ttn;
 	private Integer rf_chain_ttn;
 
@@ -63,10 +67,11 @@ public class Gateway {
 	private Integer msg_counter_ttn;
 	private Boolean msg_is_retry_ttn;
 
-	public Gateway(Uplink uplink) {
+	public Gateway(Uplink uplink, String ttn_stack) {
 		this.created_at = uplink.getCreated_at();
 		this.uplink = uplink;
-
+		this.ttn_stack = ttn_stack;
+		
 		this.msg_app_id_ttn = uplink.getMsg_app_id_ttn();
 		this.msg_dev_id_ttn = uplink.getMsg_dev_id_ttn();
 		this.msg_hardware_serial_ttn = uplink.getMsg_hardware_serial_ttn();
@@ -75,7 +80,7 @@ public class Gateway {
 		this.msg_is_retry_ttn = uplink.getMsg_is_retry_ttn();
 	}
 
-	public static List<Gateway> parse(Uplink uplink) {
+	public static List<Gateway> parseV2(Uplink uplink) {
 		List<Gateway> gateways = new LinkedList<Gateway>();
 
 		try {
@@ -92,7 +97,7 @@ public class Gateway {
 			while (it.hasNext()) {
 				jn = it.next();
 
-				Gateway gw = new Gateway(uplink);
+				Gateway gw = new Gateway(uplink, uplink.getTtn_stack());
 
 				gw.gtw_id_ttn = JsonHelper.toText(jn, "gtw_id");
 
@@ -110,6 +115,51 @@ public class Gateway {
 				gw.latitude_ttn = JsonHelper.toDouble(jn, "latitude");
 				gw.longitude_ttn = JsonHelper.toDouble(jn, "longitude");
 				gw.location_source_ttn = JsonHelper.toText(jn, "location_source");
+
+				gateways.add(gw);
+			}
+		} catch (IOException ex) {
+			LOG.error("Failed to parse gateways: " + uplink.getJson_ttn(), ex);
+		}
+
+		return gateways;
+	}
+
+	public static List<Gateway> parseV3(Uplink uplink) {
+		List<Gateway> gateways = new LinkedList<Gateway>();
+
+		try {
+			ObjectMapper mapper = new ObjectMapper();
+			JsonNode jn = mapper.readTree(uplink.getJson_ttn());
+
+			JsonNode gws = jn.findValue("rx_metadata");
+			if (gws == null || gws.isNull()) {
+				LOG.debug("Gateways are empty: " + uplink.getJson_ttn());
+				return gateways;
+			}
+
+			Iterator<JsonNode> it = gws.elements();
+			while (it.hasNext()) {
+				jn = it.next();
+
+				Gateway gw = new Gateway(uplink, uplink.getTtn_stack());
+
+				gw.gtw_id_ttn = JsonHelper.toText(jn, "eui");
+				gw.gtw_name_ttn = JsonHelper.toText(jn, "gateway_id");
+
+				gw.timestamp_ttn = JsonHelper.toLong(jn, "timestamp");
+				gw.time_ttn = JsonHelper.toText(jn, "time");
+				if (gw.time_ttn != null && !gw.time_ttn.isEmpty()) {
+					gw.time_converted = Instant.parse(gw.time_ttn);
+				}
+
+				gw.rssi_ttn = JsonHelper.toInteger(jn, "rssi");
+				gw.rssi_channel_ttn = JsonHelper.toInteger(jn, "channel_rssi");
+				gw.snr_ttn = JsonHelper.toDouble(jn, "snr");
+
+				gw.latitude_ttn = JsonHelper.toDouble(jn, "latitude");
+				gw.longitude_ttn = JsonHelper.toDouble(jn, "longitude");
+				gw.location_source_ttn = JsonHelper.toText(jn, "source");
 
 				gateways.add(gw);
 			}
@@ -200,4 +250,15 @@ public class Gateway {
 		return msg_is_retry_ttn;
 	}
 
+	public String getTtn_stack() {
+		return ttn_stack;
+	}
+
+	public String getGtw_name_ttn() {
+		return gtw_name_ttn;
+	}
+
+	public Integer getRssi_channel_ttn() {
+		return rssi_channel_ttn;
+	}
 }
